@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">ScannerCameraX</string>
+
+    <string name="scanned_title">Отсканировано</string>
+
+    <string name="camera_permission_text">Отсканировано</string>
+</resources>
