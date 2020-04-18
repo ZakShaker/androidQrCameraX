@@ -108,9 +108,6 @@ class ScannerFragment : Fragment() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
         cameraProviderFuture.addListener(
             Runnable {
-                // CameraProvider
-                val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-
                 // Preview
                 val preview = Preview.Builder()
                     // We request aspect ratio but no resolution
@@ -118,10 +115,6 @@ class ScannerFragment : Fragment() {
                     // Set initial target rotation
                     .setTargetRotation(rotation)
                     .build()
-                    .apply {
-                        setSurfaceProvider(previewView.previewSurfaceProvider)
-                    }
-
 
                 // ImageAnalysis
                 val qrCodeAnalyzer = ImageAnalysis.Builder()
@@ -139,17 +132,20 @@ class ScannerFragment : Fragment() {
                             }
                         )
                     }
+
+                // CameraProvider
+                val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
                 // Must unbind the use-cases before rebinding them
                 cameraProvider.unbindAll()
 
-                runCatching {
-                    cameraProvider.bindToLifecycle(
-                        this,
-                        cameraSelector,
-                        preview,
-                        qrCodeAnalyzer
-                    )
-                }
+                val camera = cameraProvider.bindToLifecycle(
+                    this,
+                    cameraSelector,
+                    preview,
+                    qrCodeAnalyzer
+                )
+
+                preview.setSurfaceProvider(previewView.createSurfaceProvider(camera.cameraInfo))
 
             },
             ContextCompat.getMainExecutor(requireContext())
