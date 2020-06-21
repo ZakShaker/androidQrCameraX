@@ -79,7 +79,7 @@ class ScannerFragment : Fragment() {
         grantResults: IntArray
     ) {
         if (isCameraPermissionGranted()) {
-            bindCameraUseCases(view_preview)
+            startCamera()
         } else {
             Toast.makeText(
                 requireContext(),
@@ -93,17 +93,9 @@ class ScannerFragment : Fragment() {
 
     /** Declare and bind preview, capture and analysis use cases */
     private fun bindCameraUseCases(previewView: PreviewView) {
-
-        // Get screen metrics used to setup camera for full screen resolution
         val metrics = DisplayMetrics().also { previewView.display.getRealMetrics(it) }
-
         val screenAspectRatio = aspectRatio(metrics.widthPixels, metrics.heightPixels)
-
         val rotation = previewView.display.rotation
-
-        // Bind the CameraProvider to the LifeCycleOwner
-        val cameraSelector =
-            CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
 
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
         cameraProviderFuture.addListener(
@@ -116,13 +108,26 @@ class ScannerFragment : Fragment() {
                     .setTargetRotation(rotation)
                     .build()
 
-                // ImageAnalysis
+                // CameraProvider
+                val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+                // Must unbind the use-cases before rebinding them
+                cameraProvider.unbindAll()
+
+                val cameraSelector =
+                    CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK)
+                        .build()
+
+                // Use case: Preview
+                preview.setSurfaceProvider(previewView.createSurfaceProvider())
+
+                // Use case: ImageAnalysis
                 val qrCodeAnalyzer = ImageAnalysis.Builder()
                     // We request aspect ratio but no resolution
                     .setTargetAspectRatio(screenAspectRatio)
                     // Set initial target rotation, we will have to call this again if rotation changes
                     // during the lifecycle of this use case
                     .setTargetRotation(rotation)
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                     .apply {
                         setAnalyzer(
@@ -133,19 +138,11 @@ class ScannerFragment : Fragment() {
                         )
                     }
 
-                // CameraProvider
-                val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-                // Must unbind the use-cases before rebinding them
-                cameraProvider.unbindAll()
-
-                val camera = cameraProvider.bindToLifecycle(
-                    this,
-                    cameraSelector,
+                cameraProvider.bindToLifecycle(
+                    this, cameraSelector,
                     preview,
                     qrCodeAnalyzer
                 )
-
-                preview.setSurfaceProvider(previewView.createSurfaceProvider(camera.cameraInfo))
 
             },
             ContextCompat.getMainExecutor(requireContext())
@@ -181,7 +178,7 @@ class ScannerFragment : Fragment() {
     companion object {
         private const val RATIO_4_3_VALUE = 4.0 / 3.0
         private const val RATIO_16_9_VALUE = 16.0 / 9.0
-        private const val REQUEST_CAMERA_PERMISSION = 10
+        private const val REQUEST_CAMERA_PERMISSION = 1
     }
 
 }
