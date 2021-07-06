@@ -2,36 +2,34 @@ package com.zakshaker.scannerx
 
 
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-import com.google.firebase.ml.vision.FirebaseVision
-import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcode
-import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcodeDetectorOptions
-import com.google.firebase.ml.vision.common.FirebaseVisionImage
-import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
+import com.google.mlkit.vision.barcode.Barcode
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.common.InputImage
 
 
 class QrCodesAnalyzer(
     private val onQrCodesDetected: (qrCodes: List<String>) -> Unit
 ) : ImageAnalysis.Analyzer {
 
-    @SuppressLint("UnsafeExperimentalUsageError")
+    @SuppressLint("UnsafeOptInUsageError")
     override fun analyze(imageProxy: ImageProxy) {
         imageProxy.image?.let { img ->
-            val options = FirebaseVisionBarcodeDetectorOptions.Builder()
-                .setBarcodeFormats(FirebaseVisionBarcode.FORMAT_QR_CODE)
+            val options = BarcodeScannerOptions.Builder()
+                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
                 .build()
 
-            val detector = FirebaseVision.getInstance().getVisionBarcodeDetector(options)
+            val detector = BarcodeScanning.getClient(options)
 
             val visionImage =
-                FirebaseVisionImage.fromMediaImage(
+                InputImage.fromMediaImage(
                     img,
-                    degreesToFirebaseRotation(imageProxy.imageInfo.rotationDegrees)
+                    imageProxy.imageInfo.rotationDegrees
                 )
 
-            detector.detectInImage(visionImage)
+            detector.process(visionImage)
                 .addOnSuccessListener { codes ->
                     codes.mapNotNull { it.rawValue }.let(onQrCodesDetected)
                 }
@@ -41,13 +39,4 @@ class QrCodesAnalyzer(
 
         }
     }
-
-    private fun degreesToFirebaseRotation(degrees: Int): Int = when (degrees) {
-        0 -> FirebaseVisionImageMetadata.ROTATION_0
-        90 -> FirebaseVisionImageMetadata.ROTATION_90
-        180 -> FirebaseVisionImageMetadata.ROTATION_180
-        270 -> FirebaseVisionImageMetadata.ROTATION_270
-        else -> throw Exception("Rotation must be 0, 90, 180, or 270.")
-    }
-
 }

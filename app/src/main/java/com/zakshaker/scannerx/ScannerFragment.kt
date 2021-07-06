@@ -99,7 +99,7 @@ class ScannerFragment : Fragment() {
 
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
         cameraProviderFuture.addListener(
-            Runnable {
+            {
                 // Preview
                 val preview = Preview.Builder()
                     // We request aspect ratio but no resolution
@@ -118,7 +118,7 @@ class ScannerFragment : Fragment() {
                         .build()
 
                 // Use case: Preview
-                preview.setSurfaceProvider(previewView.createSurfaceProvider())
+                preview.setSurfaceProvider(previewView.surfaceProvider)
 
                 // Use case: ImageAnalysis
                 val qrCodeAnalyzer = ImageAnalysis.Builder()
